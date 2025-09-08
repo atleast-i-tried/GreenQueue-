@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 
-// --- Icons ---
+// --- Icons (unchanged) ---
 const ICONS = {
   Logo: ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -55,7 +55,7 @@ const ICONS = {
   ),
 };
 
-// --- Mock API --- (unchanged)
+// --- Mock API (unchanged) ---
 const mockApi = {
   upload: (file) => new Promise((res) => setTimeout(() => res({ filePath: `s3://mock-bucket/${file.name}` }), 1000)),
   launch: (filePath, priority) => new Promise((res) => setTimeout(() => res({ jobId: `job_${Date.now()}`, region: "us-east-1", status: "Pending" }), 1000)),
@@ -79,13 +79,14 @@ const formatBytes = (bytes) => {
   return `${Math.round(value * 10) / 10} ${units[i]}`;
 };
 
-// --- UI primitives: strictly white + green shades only ---
+// UI primitives
 const Card = ({ children, className = "" }) => (
   <div className={`bg-white border border-green-200 rounded-2xl p-6 sm:p-8 ${className}`}>
     {children}
   </div>
 );
 
+// File uploader
 const FileUploader = ({ file, setFile, disabled }) => {
   const [isDragging, setIsDragging] = useState(false);
   const handleDrag = (e, val) => { e.preventDefault(); e.stopPropagation(); if (!disabled) setIsDragging(val); };
@@ -103,8 +104,8 @@ const FileUploader = ({ file, setFile, disabled }) => {
           onDragEnter={(e) => handleDrag(e, true)} onDragOver={(e) => handleDrag(e, true)} onDragLeave={(e) => handleDrag(e, false)} onDrop={handleDrop}
         >
           <ICONS.UploadCloud className="w-12 h-12 text-green-600 mb-3" />
-          <p className="text-sm text-green-700"><span className="font-semibold text-green-700">Click to upload</span> or drag and drop</p>
-          <p className="text-xs text-green-600 mt-1">Up to 50MB. Files are processed locally (mock).</p>
+          <p className="text-sm text-green-700"><span className="font-semibold text-green-700">Submit a Job</span> or drag and drop</p>
+          <p className="text-xs text-green-600 mt-1">.</p>
           <input id="file-upload" type="file" className="sr-only" onChange={handleFileChange} disabled={disabled} />
         </label>
       ) : (
@@ -127,15 +128,13 @@ const FileUploader = ({ file, setFile, disabled }) => {
   );
 };
 
-
-
+// Priority selector
 const PrioritySelector = ({ priority, setPriority, disabled }) => {
   const priorities = [
     { id: "Green", label: "Eco", icon: ICONS.CheckCircle },
     { id: "Cheap", label: "Budget", icon: ICONS.Download },
     { id: "Fast", label: "Urgent", icon: ICONS.Loader },
   ];
-
 
   return (
     <div>
@@ -161,11 +160,100 @@ const PrioritySelector = ({ priority, setPriority, disabled }) => {
   );
 };
 
+// Service selector
+const ServiceSelector = ({ service, setService, disabled }) => {
+  const services = [
+    { id: "Instances", label: "Compute Instances" },
+    { id: "Storage", label: "Storage (S3/EBS)" },
+    { id: "Databases", label: "Databases" },
+  ];
+
+  return (
+    <div className="mt-4">
+      <label className="block text-sm font-medium text-green-700 mb-2">Choose service to compare costs</label>
+      <div className="relative">
+        <select
+          value={service || ""}
+          onChange={(e) => setService(e.target.value || null)}
+          disabled={disabled}
+          className="w-full rounded-lg border border-green-200 bg-white py-3 px-4 pr-10 text-green-700 focus:outline-none focus:ring-2 focus:ring-green-100"
+        >
+          <option value="">— Select a service —</option>
+          {services.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+};
+
+// InstanceType selector
+const InstanceTypeSelector = ({ instanceType, setInstanceType, disabled }) => {
+  const types = ["t3.micro", "t3.small", "t2.micro", "m5.large"];
+  return (
+    <div className="mt-3">
+      <label className="block text-sm font-medium text-green-700 mb-2">Select instance type</label>
+      <select value={instanceType || ""} onChange={(e) => setInstanceType(e.target.value || null)} disabled={disabled}
+        className="w-full rounded-lg border border-green-200 bg-white py-2 px-3 text-green-700">
+        <option value="">— Select instance type —</option>
+        {types.map(t => <option key={t} value={t}>{t}</option>)}
+      </select>
+    </div>
+  );
+};
+
+// DB instance class selector
+const DBClassSelector = ({ dbInstanceClass, setDbInstanceClass, disabled }) => {
+  const classes = ["db.t3.micro", "db.t3.small", "db.t2.micro", "db.m5.large"];
+  return (
+    <div className="mt-3">
+      <label className="block text-sm font-medium text-green-700 mb-2">Select DB instance class (optional)</label>
+      <select value={dbInstanceClass || ""} onChange={(e) => setDbInstanceClass(e.target.value || null)} disabled={disabled}
+        className="w-full rounded-lg border border-green-200 bg-white py-2 px-3 text-green-700">
+        <option value="">— select (default db.t3.micro) —</option>
+        {classes.map(c => <option key={c} value={c}>{c}</option>)}
+      </select>
+    </div>
+  );
+};
+
+// ---------------------------
+// Simplified CostPanel (your pasted simple version)
+// shows single region/location/price returned by /api/schedule
+// ---------------------------
+const CostPanel = ({ costResult, loading, error }) => {
+  if (loading) {
+    return (
+      <div className="mt-4 p-4 rounded-lg border border-green-100 bg-green-50 text-center text-green-700">
+        Loading pricing info...
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="mt-4 p-4 rounded-lg border-l-4 border-green-700 bg-green-50 text-sm text-green-800">
+        {error}
+      </div>
+    );
+  }
+  if (!costResult) return null;
+
+  return (
+    <div className="mt-4 p-4 rounded-lg border border-green-100 bg-white">
+      <h4 className="text-sm font-semibold text-green-800 mb-2">Pricing Info</h4>
+      <div className="text-sm text-green-700">
+        <p><strong>Region:</strong> {costResult.region || "unknown"}</p>
+        <p><strong>Location:</strong> {costResult.location || "unknown"}</p>
+        <p><strong>Price:</strong> ${costResult.price != null ? (Number(costResult.price).toFixed(4)) : "unknown"}</p>
+      </div>
+    </div>
+  );
+};
+
+// Job tracker (unchanged)
 const JobTracker = ({ job, onCheckStatus, isCheckingStatus }) => {
-  const statusMap = useMemo(() => ({ Pending: { text: 'Job Pending', step: 1 }, Processing: { text: 'Processing Data', step: 2 }, Completed: { text: 'Completed', step: 3 }, Failed: { text: 'Failed', step: 3 } }), []);
+  const statusMap = useMemo(() => ({ Pending: { text: 'Job Submitted', step: 1 }, Processing: { text: 'Processing Data', step: 2 }, Completed: { text: 'Completed', step: 3 }, Failed: { text: 'Failed', step: 3 } }), []);
 
   const getStatusStyles = (status) => {
-    // only green/white shades
     switch (status) {
       case 'Pending':
       case 'Processing':
@@ -189,12 +277,15 @@ const JobTracker = ({ job, onCheckStatus, isCheckingStatus }) => {
 
       {job ? (
         <>
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-sm text-green-700" aria-live="polite">ID: <span className="font-mono px-2 py-1 rounded border border-green-200 bg-green-50">{job.jobId}</span></p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-green-700" aria-live="polite">ID: <span className="font-mono px-2 py-1 rounded border border-green-200 bg-green-50">{job.jobId}</span></p>
+              <p className="text-sm text-green-700 mt-2">Scheduled Region: <span className="font-mono px-2 py-1 rounded border border-green-200 bg-green-50">{job.region}</span></p>
+            </div>
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${badgeBg} ${badgeText}`}>{current.text}</span>
           </div>
 
-          <div className="relative w-full mb-8">
+          <div className="relative w-full mb-6">
             <div className="absolute top-1/2 left-0 w-full h-0.5 bg-green-100" />
             <div className="absolute top-1/2 left-0 h-0.5 bg-green-700 transition-all duration-500" style={{ width: `${((current.step - 1) / (timelineSteps.length - 1)) * 100}%` }} />
 
@@ -215,20 +306,19 @@ const JobTracker = ({ job, onCheckStatus, isCheckingStatus }) => {
             </div>
           </div>
 
+          <div className="mb-4 text-sm text-green-700">
+            <p><strong>Priority:</strong> {job.priority || '—'}</p>
+            <p className="mt-1"><strong>Carbon:</strong> {job.details?.carbon ?? '—'} gCO₂/kWh • <strong>Cost:</strong> ${job.details?.cost ?? '—'} • <strong>Speed:</strong> {job.details?.speed ?? '—'}</p>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={onCheckStatus} disabled={isCheckingStatus} className="w-full flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm text-white bg-green-700 hover:bg-green-800 disabled:bg-green-300 transition-all">
               {isCheckingStatus ? <><ICONS.Loader className="animate-spin h-5 w-5" /> Refreshing...</> : '🔄 Refresh Status'}
             </button>
 
-            {job.status === 'Completed' && (
-              <a href={job.outputLink} target="_blank" rel="noopener noreferrer" className="w-full flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg text-green-800 bg-green-50 hover:bg-green-100 no-underline">
-                <ICONS.Download className="h-5 w-5" /> Download Result
-              </a>
-            )}
-
             {job.status === 'Failed' && (
               <div className="w-full flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg text-green-800 bg-green-50">
-                <ICONS.CheckCircle className="h-5 w-5" /> Please try again
+                <ICONS.CheckCircle className="h-5 w-5" /> Job failed — try again
               </div>
             )}
           </div>
@@ -242,9 +332,21 @@ const JobTracker = ({ job, onCheckStatus, isCheckingStatus }) => {
   );
 };
 
+// ---------------------------
+// Main dashboard component
+// (keeps your original UI intact, but calls /api/schedule in the simplified way when Cheap)
+// ---------------------------
 export default function GreenQueue_Dashboard() {
   const [file, setFile] = useState(null);
   const [priority, setPriority] = useState('Green');
+  const [service, setService] = useState(null);
+  const [instanceType, setInstanceType] = useState(null);
+  const [dbInstanceClass, setDbInstanceClass] = useState(null);
+
+  const [costResult, setCostResult] = useState(null);
+  const [costLoading, setCostLoading] = useState(false);
+  const [costError, setCostError] = useState("");
+
   const [job, setJob] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -253,37 +355,139 @@ export default function GreenQueue_Dashboard() {
 
   const handleApiError = (message, err) => { console.error(err); setError(message); };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!file) { setError('Please select a file to upload.'); return; }
-    setError(''); setIsLoading(true); setJob(null); setUploadProgress(0);
+  // Reset service and cost data when switching away from Cheap
+  useEffect(() => {
+    if (priority !== "Cheap") {
+      setService(null);
+      setInstanceType(null);
+      setDbInstanceClass(null);
+      setCostResult(null);
+      setCostError("");
+    }
+  }, [priority]);
 
-    const progressInterval = setInterval(() => setUploadProgress((p) => Math.min(90, Math.round(p + Math.random() * 15))), 300);
+  // handle form submit: upload -> if Cheap call pricing backend; else use mock launch
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    setError("");
+    setCostError("");
+    setCostResult(null);
+
+    // basic validations
+    if (!file) { setError('Please select a file to upload.'); return; }
+    if (priority === "Cheap" && !service) { setError('Please select a service for cost comparison.'); return; }
+    if (priority === "Cheap" && service === "Instances" && !instanceType) { setError('Please pick an instance type to compare costs.'); return; }
+
+    setIsLoading(true);
+    setJob(null);
+    setUploadProgress(0);
+
+    const progressInterval = setInterval(() =>
+      setUploadProgress((p) => Math.min(90, Math.round(p + Math.random() * 15)))
+    , 300);
 
     try {
+      // simulate upload (or you can keep your real upload logic)
       const { filePath } = await mockApi.upload(file);
       clearInterval(progressInterval);
       setUploadProgress(100);
-      await new Promise((r) => setTimeout(r, 300));
-      if (!filePath) throw new Error('File path not returned.');
-      const jobData = await mockApi.launch(filePath, priority);
-      setJob(jobData);
+
+      if (priority === "Cheap") {
+        // --- simplified pricing call per your last pasted snippet ---
+        setCostLoading(true);
+        setCostResult(null);
+        setCostError("");
+
+        try {
+          // Build minimal payload expected by your simple /api/schedule route
+          // when service === "Instances" we send instanceType
+          const payload = {};
+          if (service === "Instances") payload.instanceType = instanceType || "t3.micro";
+          else payload.service = service || "Storage";
+
+          const res = await fetch("/api/schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            const msg = data?.error || data?.message || "Failed to fetch pricing";
+            setCostError(msg);
+            throw new Error(msg);
+          }
+
+          // route.js (your last working version) returns { region, location, price } for best region
+          const region = data.region || data.regionName || data.scheduledRegion || null;
+          const location = data.location || data.locationName || null;
+          const price = (data.price != null) ? Number(data.price) : (data.pricePerUnit ? Number(data.pricePerUnit) : null);
+
+          const simpleCost = { region, location, price };
+          setCostResult(simpleCost);
+
+          // set Job with scheduled region from pricing API
+          const newJob = {
+            jobId: `job_${Date.now()}`,
+            region: region || "unknown",
+            status: 'Pending', // job will show pending then processing
+            priority,
+            details: { scheduledBy: "pricing-api", raw: data },
+          };
+          setJob(newJob);
+
+          // optional: immediately move to Processing state for UI feedback
+          setTimeout(() => setJob((j) => j ? { ...j, status: 'Processing' } : j), 800);
+
+        } catch (err) {
+          console.error("Pricing call failed:", err);
+          if (!costError) setCostError(err.message || "Failed to fetch pricing. See console for details.");
+        } finally {
+          setCostLoading(false);
+        }
+      } else {
+        // Non-Cheap: use mock launcher (unchanged)
+        const launch = await mockApi.launch(filePath, priority);
+        const newJob = {
+          jobId: launch.jobId,
+          region: launch.region || "us-east-1",
+          status: launch.status || 'Pending',
+          priority,
+          details: {},
+        };
+        setJob(newJob);
+      }
+
       setUploadProgress(0);
     } catch (err) {
       handleApiError('Failed to launch job. Please try again.', err);
       setUploadProgress(0);
-    } finally { setIsLoading(false); }
-  };
+    } finally {
+      setIsLoading(false);
+      clearInterval(progressInterval);
+    }
+  }, [file, priority, service, instanceType, dbInstanceClass, costError]);
 
   const checkStatus = useCallback(async () => {
     if (!job?.jobId) return;
     setIsCheckingStatus(true); setError('');
-    try { const { status, outputLink } = await mockApi.checkStatus(job.jobId); setJob((prev) => ({ ...prev, status, outputLink })); }
+    try { const { status } = await mockApi.checkStatus(job.jobId); setJob((prev) => ({ ...prev, status })); }
     catch (err) { handleApiError('Failed to retrieve job status.', err); }
     finally { setIsCheckingStatus(false); }
   }, [job?.jobId]);
 
   useEffect(() => { if (job?.status === 'Processing') { const t = setTimeout(checkStatus, 3000); return () => clearTimeout(t); } }, [job?.status, checkStatus]);
+
+  // UI: when service changes we only set state; no immediate pricing fetch
+  const onServiceChange = (svc) => {
+    setService(svc);
+    // reset dependent selectors
+    setInstanceType(null);
+    setDbInstanceClass(null);
+    setCostResult(null);
+    setCostError("");
+  };
 
   return (
     <div className="min-h-screen w-full bg-white text-green-800 font-sans antialiased">
@@ -311,6 +515,23 @@ export default function GreenQueue_Dashboard() {
                 <FileUploader file={file} setFile={setFile} disabled={isLoading} />
                 <PrioritySelector priority={priority} setPriority={setPriority} disabled={isLoading} />
 
+                {priority === "Cheap" && (
+                  <div>
+                    <ServiceSelector service={service} setService={onServiceChange} disabled={isLoading || costLoading} />
+
+                    {service === "Instances" && (
+                      <InstanceTypeSelector instanceType={instanceType} setInstanceType={setInstanceType} disabled={isLoading || costLoading} />
+                    )}
+
+                    {service === "Databases" && (
+                      <DBClassSelector dbInstanceClass={dbInstanceClass} setDbInstanceClass={setDbInstanceClass} disabled={isLoading || costLoading} />
+                    )}
+
+                    {/* Show the simplified cost panel after submit */}
+                    <CostPanel costResult={costResult} loading={costLoading} error={costError} />
+                  </div>
+                )}
+
                 {isLoading && (
                   <div className="w-full bg-green-50 rounded-lg overflow-hidden">
                     <div className="flex items-center justify-between px-3 py-2 text-xs text-green-700">
@@ -322,7 +543,6 @@ export default function GreenQueue_Dashboard() {
                     </div>
                   </div>
                 )}
-
               </div>
             </Card>
 
@@ -333,7 +553,11 @@ export default function GreenQueue_Dashboard() {
                 </div>
               )}
 
-              <button type="submit" disabled={isLoading || !file} className="w-full group inline-flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-lg font-semibold text-white bg-green-700 shadow-lg hover:bg-green-800 disabled:bg-green-300 transition-all duration-200">
+              <button
+                type="submit"
+                disabled={isLoading || !file || (priority === "Cheap" && !service) || (priority === "Cheap" && service === "Instances" && !instanceType)}
+                className="w-full group inline-flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-lg font-semibold text-white bg-green-700 shadow-lg hover:bg-green-800 disabled:bg-green-300 transition-all duration-200"
+              >
                 {isLoading ? <><ICONS.Loader className="animate-spin h-6 w-6" /> Processing...</> : <>🍃 Launch Green Job</>}
               </button>
             </div>
